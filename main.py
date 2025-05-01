@@ -5,10 +5,18 @@ from PyQt5.QtWidgets import (
     QHBoxLayout, QVBoxLayout, QSlider, QLabel, QOpenGLWidget
 )
 from PyQt5.QtCore import Qt
+from PyQt5.QtGui import QSurfaceFormat
 from OpenGL.GL import *
 from OpenGL.GLU import *
 
+# enable default multisampling for antialiasing
+fmt = QSurfaceFormat()
+fmt.setSamples(4)
+QSurfaceFormat.setDefaultFormat(fmt)
+
+
 # Quaternion utilities
+
 def quat_mul(a, b):
     w1, x1, y1, z1 = a
     w2, x2, y2, z2 = b
@@ -19,6 +27,7 @@ def quat_mul(a, b):
         w1*z2 + x1*y2 - y1*x2 + z1*w2
     )
 
+
 def quat_from_axis_angle(axis, angle):
     x, y, z = axis
     norm = math.sqrt(x*x + y*y + z*z)
@@ -27,6 +36,7 @@ def quat_from_axis_angle(axis, angle):
     x, y, z = x/norm, y/norm, z/norm
     s = math.sin(angle/2)
     return (math.cos(angle/2), x*s, y*s, z*s)
+
 
 def quat_to_matrix(q):
     w, x, y, z = q
@@ -38,6 +48,7 @@ def quat_to_matrix(q):
         [2*(x*z - y*w), 2*(y*z + x*w), 1-2*(x*x+y*y), 0],
         [0, 0, 0, 1]
     ]
+
 
 def quat_to_euler(q):
     w, x, y, z = q
@@ -75,6 +86,11 @@ class ModelWidget(QOpenGLWidget):
         self.pelvis_vertices, self.pelvis_faces = [], []
         self.load_model(baby_path, self.baby_vertices, self.baby_faces)
         self.load_model(pelvis_path, self.pelvis_vertices, self.pelvis_faces)
+        self.orientation = (1.0, 0.0, 0.0, 0.0)
+        self.baby_vertices, self.baby_faces = [], []
+        self.pelvis_vertices, self.pelvis_faces = [], []
+        self.load_model(baby_path, self.baby_vertices, self.baby_faces)
+        self.load_model(pelvis_path, self.pelvis_vertices, self.pelvis_faces)
 
     def load_model(self, path, verts, faces):
         verts.clear()
@@ -96,6 +112,12 @@ class ModelWidget(QOpenGLWidget):
         glClearColor(0.1, 0.1, 0.1, 1)
         glEnable(GL_DEPTH_TEST)
         glDisable(GL_LIGHTING)
+        # enable antialiasing for lines
+        glEnable(GL_MULTISAMPLE)
+        glEnable(GL_BLEND)
+        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
+        glEnable(GL_LINE_SMOOTH)
+        glHint(GL_LINE_SMOOTH_HINT, GL_NICEST)
 
     def resizeGL(self, w, h):
         glViewport(0, 0, w, h)
